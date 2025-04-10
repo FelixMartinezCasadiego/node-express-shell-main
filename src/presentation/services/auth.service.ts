@@ -1,4 +1,5 @@
 import { bcrypAdapter } from "../../config/bcrypt.adapter";
+import { JwtAdapter } from "../../config/jwt.adapter";
 import { UserModel } from "../../data/mongo/models/user.models";
 import { LoginUserDto } from "../../domain/dtos/auth/login-user.dto";
 import { RegisterUserDto } from "../../domain/dtos/auth/register-user.dto";
@@ -20,13 +21,15 @@ export class AuthService {
       user.password = bcrypAdapter.hash(registerUSerDto.password);
 
       await user.save();
-      // JWT para mantener autentificación del usuario
+      const token = await JwtAdapter.generateToken({ id: user.id });
+
+      if (!token) throw CustomError.badRequest("Error while creating JWT");
 
       // email de confirmacion
 
       const { password, ...userEntity } = UserEntity.fromObject(user);
 
-      return { user: userEntity, token: "ABC" };
+      return { user: userEntity, token };
     } catch (error) {
       throw CustomError.internalServer(`${error}`);
     }
@@ -45,6 +48,11 @@ export class AuthService {
     if (!isMatching) throw CustomError.badRequest("Password is not valid");
 
     const { ...userEntity } = UserEntity.fromObject(user);
-    return { user: userEntity, token: "ABC" };
+
+    const token = await JwtAdapter.generateToken({ id: user.id });
+
+    if (!token) throw CustomError.badRequest("Error while creating JWT");
+
+    return { user: userEntity, token };
   }
 }
